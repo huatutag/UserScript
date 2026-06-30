@@ -48,18 +48,18 @@
       }
       .nsx-hot-flame {
         display: inline-block;
-        margin-left: 5px;
-        font-size: 16px;
+        margin-left: 4px;
+        font-size: 12px;
         animation: nsx-flame-bounce 1.2s ease-in-out infinite, nsx-flame-glow 1.5s ease-in-out infinite, nsx-flame-flicker 0.8s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
       }
       .nsx-hot-flame-l2 {
-        font-size: 18px;
+        font-size: 14px;
         animation-duration: 0.9s, 1.2s, 0.6s;
       }
       .nsx-hot-flame-l3 {
-        font-size: 20px;
+        font-size: 16px;
         animation-duration: 0.7s, 1s, 0.5s;
       }
     `;
