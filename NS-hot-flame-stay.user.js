@@ -52,19 +52,19 @@
         font-size: 1em;
         transform: scale(0.7);
         transform-origin: left center;
-        animation: nsx-flame-bounce 2.4s ease-in-out infinite, nsx-flame-glow 3s ease-in-out infinite, nsx-flame-flicker 1.6s ease-in-out infinite;
+        animation: nsx-flame-bounce 5s ease-in-out infinite, nsx-flame-glow 6s ease-in-out infinite, nsx-flame-flicker 3s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
       }
       .nsx-hot-flame-l2 {
         transform: scale(0.85);
         transform-origin: left center;
-        animation-duration: 1.8s, 2.4s, 1.2s;
+        animation-duration: 4s, 5s, 2.5s;
       }
       .nsx-hot-flame-l3 {
         transform: scale(1);
         transform-origin: left center;
-        animation-duration: 1.4s, 2s, 1s;
+        animation-duration: 3s, 4s, 2s;
       }
     `;
     document.head.appendChild(style);
