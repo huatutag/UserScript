@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.0.0
+// @version      1.0.1
 // @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮、节点信息、计算样式、HTML 预览、DOM 家谱导航、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
@@ -65,7 +65,7 @@
 
     .${P}panel{
       position:fixed; left:0; right:0; bottom:0; z-index:2147483646;
-      max-height:72vh;
+      max-height:55vh;
       background:rgba(28,28,30,.96);
       backdrop-filter:blur(20px) saturate(180%);
       -webkit-backdrop-filter:blur(20px) saturate(180%);
@@ -443,33 +443,19 @@
   function ensurePanel() {
     if (state.panel) return state.panel;
     const body = h('div', { class: P + 'body' });
-    const tagChip = h('span', { class: P + 'tag' });
-    const titleEl = h('div', { class: P + 'title' });
-    const upBtn = h('button', { class: P + 'iconbtn', title: '选择父元素', onclick: selectParent }, '↑');
-    const closeBtn = h('button', { class: P + 'iconbtn', title: '关闭面板', onclick: () => { hidePanel(); highlightElement(null); } }, '×');
-    const head = h('div', { class: P + 'head' }, [tagChip, titleEl, upBtn, closeBtn]);
     const grip = h('div', { class: P + 'grip' });
 
-    const copySel = h('button', { class: P + 'btn', onclick: async () => {
-      const s = state.target ? buildSelector(state.target) : '';
-      (await copyText(s)) ? toast('选择器已复制') : toast('复制失败');
-    } }, '复制选择器');
-    const copyHtml = h('button', { class: P + 'btn', onclick: async () => {
+    const copyBtn = h('button', { class: P + 'btn primary', onclick: async () => {
       const s = state.target ? state.target.outerHTML : '';
-      (await copyText(s)) ? toast('HTML 已复制') : toast('复制失败');
-    } }, '复制 HTML');
-    const copyAll = h('button', { class: P + 'btn primary', onclick: copyAllInfo }, '复制全部');
-    const stopBtn = h('button', { class: P + 'btn danger', onclick: () => { stopInspecting(); hidePanel(); } }, '退出检查');
-    const acts = h('div', { class: P + 'acts' }, [copySel, copyHtml, copyAll, stopBtn]);
+      (await copyText(s)) ? toast('outerHTML 已复制') : toast('复制失败');
+    } }, '复制 outerHTML');
+    const acts = h('div', { class: P + 'acts' }, [copyBtn]);
 
-    const panel = h('div', { class: P + 'panel' }, [grip, head, body, acts]);
+    const panel = h('div', { class: P + 'panel' }, [grip, body, acts]);
     document.documentElement.appendChild(panel);
 
     state.panel = panel;
     state.body = body;
-    state.tagChip = tagChip;
-    state.titleEl = titleEl;
-    state.upBtn = upBtn;
     return panel;
   }
 
@@ -559,40 +545,7 @@
     const body = state.body;
     body.innerHTML = '';
     if (!el || el.nodeType !== 1) return;
-
-    state.tagChip.textContent = el.tagName.toLowerCase();
-    state.titleEl.textContent = buildSelector(el);
-    state.upBtn.disabled = (!el.parentElement || el.parentElement === document.documentElement);
-
-    const r = el.getBoundingClientRect();
-
-    body.appendChild(section('概要', kv([
-      ['选择器', buildSelector(el)],
-      ['节点类型', nodeTypeStr(el.nodeType)],
-      ['可见性', describeVisibility(el)],
-      ['inner文本', truncate((el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim(), 60) || '（空）'],
-    ])));
-
-    body.appendChild(section('尺寸与位置', kv([
-      ['offset', (el.offsetWidth || 0) + ' × ' + (el.offsetHeight || 0) + ' px'],
-      ['client', (el.clientWidth || 0) + ' × ' + (el.clientHeight || 0) + ' px'],
-      ['scroll', (el.scrollWidth || 0) + ' × ' + (el.scrollHeight || 0) + ' px'],
-      ['scrollTop/L', (el.scrollTop || 0) + ' / ' + (el.scrollLeft || 0)],
-      ['x / y', r.x.toFixed(1) + ' / ' + r.y.toFixed(1)],
-      ['width / height', r.width.toFixed(1) + ' / ' + r.height.toFixed(1)],
-      ['top / left', r.top.toFixed(1) + ' / ' + r.left.toFixed(1)],
-      ['right / bottom', r.right.toFixed(1) + ' / ' + r.bottom.toFixed(1)],
-    ])));
-
-    const attrs = [];
-    for (const a of el.attributes) attrs.push([a.name, a.value]);
-    if (attrs.length) body.appendChild(section('属性（' + attrs.length + '）', attrsBox(el.tagName.toLowerCase(), attrs)));
-
-    body.appendChild(section('计算样式', computedBox(el)));
-
-    body.appendChild(section('outerHTML（截断 800 字符）', codeBox(truncate(el.outerHTML, 800))));
-
-    body.appendChild(familyBox(el));
+    body.appendChild(section('outerHTML', codeBox(el.outerHTML)));
   }
 
   function copyAllInfo() {
