@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.6
+// @version      1.1.7
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -166,17 +166,17 @@
       font-size: 13px;
     `;
 
-    let html = '<h4 style="margin: 0 0 12px 0; color: #1890ff;">🔍 Iconpark 图标分析</h4>';
+    let html = '<h4 style="margin: 0 0 12px 0; color: #1890ff;">🔍 Iconpark 图标分析（点击某项可定位元素）</h4>';
 
-    infoList.forEach(info => {
+    infoList.forEach((info, idx) => {
       html += `
-        <div style="margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
-          <div style="font-weight: bold; margin-bottom: 4px;">图标 ${info.index}</div>
+        <div class="nsx-debug-item" data-index="${idx}" style="margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#e6f7ff'" onmouseout="this.style.background='#f5f5f5'">
+          <div style="font-weight: bold; margin-bottom: 4px;">图标 ${info.index}（点击定位）</div>
           <div>href: <code style="color: #52c41a;">${info.href}</code></div>
           <div>fill: <span style="color: ${info.fill !== 'none' ? '#f5222d' : '#999'};">${info.fill}</span></div>
           <div>stroke: <span style="color: ${info.stroke !== 'none' ? '#f5222d' : '#999'};">${info.stroke}</span></div>
           <div>color: <span style="color: #f5222d;">${info.color}</span></div>
-          <button onclick="this.parentElement.style.display='none'" style="margin-top: 4px; padding: 2px 8px; font-size: 11px;">关闭此项</button>
+          <button onclick="event.stopPropagation(); this.parentElement.style.display='none'" style="margin-top: 4px; padding: 2px 8px; font-size: 11px;">关闭此项</button>
         </div>
       `;
     });
@@ -185,6 +185,56 @@
 
     panel.innerHTML = html;
     document.body.appendChild(panel);
+
+    // 添加点击事件：点击某项时闪烁对应元素
+    panel.querySelectorAll('.nsx-debug-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') return; // 忽略关闭按钮的点击
+
+        const idx = parseInt(item.dataset.index);
+        const targetElement = infoList[idx].element;
+
+        if (targetElement) {
+          // 滚动到元素位置
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // 闪烁动画
+          flashElement(targetElement);
+        }
+      });
+    });
+  }
+
+  function flashElement(element) {
+    // 保存原始样式
+    const originalOutline = element.style.outline;
+    const originalOutlineOffset = element.style.outlineOffset;
+
+    // 定义闪烁样式
+    let flashCount = 0;
+    const maxFlashes = 6; // 闪烁 3 次（每次包含开和关）
+
+    const flashInterval = setInterval(() => {
+      if (flashCount >= maxFlashes) {
+        // 恢复原始样式
+        element.style.outline = originalOutline;
+        element.style.outlineOffset = originalOutlineOffset;
+        clearInterval(flashInterval);
+        return;
+      }
+
+      if (flashCount % 2 === 0) {
+        // 闪烁开启：红色粗边框
+        element.style.outline = '4px solid red';
+        element.style.outlineOffset = '4px';
+      } else {
+        // 闪烁关闭：透明边框
+        element.style.outline = '4px solid transparent';
+        element.style.outlineOffset = '4px';
+      }
+
+      flashCount++;
+    }, 300); // 每 300ms 切换一次
   }
 
   function showToast(message, type = 'info') {
