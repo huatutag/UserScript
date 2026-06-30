@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.0.3
+// @version      1.0.4
 // @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮、节点信息、计算样式、HTML 预览、DOM 家谱导航、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
@@ -231,24 +231,27 @@
     return copyTextSync(text);
   }
 
-  /* iOS Safari 同步复制：必须在用户手势同步上下文中执行 execCommand */
+  /* iOS Safari 同步复制：textarea 必须保持可编辑状态，否则 execCommand 返回 true 但不实际复制 */
   function copyTextSync(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;font-size:16px;';
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;font-size:16px;border:none;padding:0;';
     document.body.appendChild(ta);
+
     ta.contentEditable = 'true';
     ta.readOnly = false;
+
     const range = document.createRange();
     range.selectNodeContents(ta);
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
     ta.setSelectionRange(0, text.length);
-    ta.readOnly = true;
+
     let ok = false;
     try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+
+    sel.removeAllRanges();
     document.body.removeChild(ta);
     return ok;
   }
@@ -474,7 +477,18 @@
 
     const copyBtn = h('button', { class: P + 'btn primary', onclick: () => {
       const s = state.target ? state.target.outerHTML : '';
-      copyTextSync(s) ? toast('outerHTML 已复制') : toast('复制失败');
+      let done = false;
+      /* 优先同步调用 Clipboard API（保持在用户手势上下文） */
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(s).then(
+          () => toast('outerHTML 已复制'),
+          () => { copyTextSync(s) ? toast('outerHTML 已复制') : toast('复制失败'); }
+        );
+        done = true;
+      }
+      if (!done) {
+        copyTextSync(s) ? toast('outerHTML 已复制') : toast('复制失败');
+      }
     } }, '复制 outerHTML');
     const acts = h('div', { class: P + 'acts' }, [copyBtn]);
 
