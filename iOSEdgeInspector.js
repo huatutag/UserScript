@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.0.2
+// @version      1.0.3
 // @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮、节点信息、计算样式、HTML 预览、DOM 家谱导航、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
@@ -346,6 +346,15 @@
     return false;
   }
 
+  function isPanelOrFab(el) {
+    let n = el;
+    while (n && n !== document.documentElement) {
+      if (n === state.panel || n === state.fab) return true;
+      n = n.parentElement;
+    }
+    return false;
+  }
+
   function pickAt(x, y) {
     if (state.hl) state.hl.box.style.display = 'none';
     let el = document.elementFromPoint(x, y);
@@ -356,6 +365,7 @@
 
   function onTouchStart(e) {
     if (!state.inspecting) return;
+    if (isPanelOrFab(e.target)) return; /* 放行面板/按钮内触摸，保证 click 能触发 */
     e.preventDefault(); e.stopPropagation();
     const t = e.touches[0]; if (!t) return;
     state.moved = false;
@@ -367,6 +377,7 @@
 
   function onTouchMove(e) {
     if (!state.inspecting) return;
+    if (isPanelOrFab(e.target)) return;
     e.preventDefault(); e.stopPropagation();
     const t = e.touches[0]; if (!t) return;
     if (Math.hypot(t.clientX - state.startX, t.clientY - state.startY) > 10) state.moved = true;
@@ -376,6 +387,7 @@
 
   function onTouchEnd(e) {
     if (!state.inspecting) return;
+    if (isPanelOrFab(e.target)) return;
     e.preventDefault(); e.stopPropagation();
     if (state.moved) return;
     const t = e.changedTouches[0];
@@ -385,7 +397,9 @@
   }
 
   function onClickGuard(e) {
-    if (state.inspecting) { e.preventDefault(); e.stopPropagation(); }
+    if (!state.inspecting) return;
+    if (isPanelOrFab(e.target)) return; /* 放行面板内点击 */
+    e.preventDefault(); e.stopPropagation();
   }
 
   /* ============================= 检查模式开关 ============================= */
