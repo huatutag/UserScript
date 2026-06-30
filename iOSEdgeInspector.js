@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.0.4
-// @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮、节点信息、计算样式、HTML 预览、DOM 家谱导航、一键复制，界面针对手机端优化。
+// @version      1.1.0
+// @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮选中元素、展示 outerHTML、拖动调整面板高度、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
 // @exclude      *://*.google.com/maps*
@@ -84,29 +84,6 @@
     .${P}grip{ flex:0 0 auto; width:100%; padding:10px 0 6px; display:flex; justify-content:center; touch-action:none; cursor:ns-resize; }
     .${P}grip::after{ content:''; width:42px; height:5px; border-radius:3px; background:rgba(235,235,245,.35); }
 
-    .${P}head{
-      flex:0 0 auto; padding:4px 16px 10px;
-      display:flex; align-items:center; gap:8px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-    }
-    .${P}tag{
-      font:600 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
-      padding:3px 8px; border-radius:6px;
-      background:rgba(255,119,130,.16); color:#ff7782;
-    }
-    .${P}title{
-      font-size:13px; font-weight:600; color:#f5f5f7;
-      flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-    }
-    .${P}iconbtn{
-      flex:0 0 auto; width:32px; height:32px; border-radius:8px; border:none;
-      background:rgba(255,255,255,.08); color:#e5e5ea; font-size:16px; font-weight:700;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .${P}iconbtn:active{ background:rgba(255,255,255,.16); }
-    .${P}iconbtn[disabled]{ opacity:.35; }
-
     .${P}body{
       overflow-y:auto; -webkit-overflow-scrolling:touch;
       padding:6px 16px 16px; flex:1 1 auto;
@@ -117,14 +94,6 @@
       color:#8e8e93; text-transform:uppercase; letter-spacing:.06em;
       margin:0 0 8px;
     }
-    .${P}sec-sub{ font:600 11px/1 -apple-system,system-ui,sans-serif; color:#6b6b70; margin:10px 0 6px; }
-
-    .${P}kv{
-      display:grid; grid-template-columns:96px 1fr; gap:4px 10px;
-      font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-    }
-    .${P}k{ color:#98989f; }
-    .${P}v{ color:#e5e5ea; word-break:break-all; }
 
     .${P}code{
       font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -132,18 +101,6 @@
       color:#d7d7de; white-space:pre-wrap; word-break:break-all;
       max-height:200px; overflow:auto; -webkit-overflow-scrolling:touch;
     }
-
-    .${P}node{
-      display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-      padding:8px 10px; background:rgba(255,255,255,.05);
-      border-radius:8px; margin:4px 0;
-      font:12px/1.4 ui-monospace,Menlo,monospace; color:#e5e5ea;
-    }
-    .${P}node:active{ background:rgba(10,132,255,.2); }
-    .${P}node .${P}tag{ background:rgba(120,120,128,.2); color:#d7d7de; }
-    .${P}node-id{ color:#ff7782; }
-    .${P}node-cls{ color:#d2a8ff; }
-    .${P}node-meta{ color:#8e8e93; margin-left:auto; font-size:11px; }
 
     .${P}acts{
       display:flex; gap:8px; flex-wrap:wrap;
@@ -161,7 +118,6 @@
     }
     .${P}btn:active{ background:rgba(255,255,255,.12); }
     .${P}btn.primary{ background:#0a84ff; border-color:transparent; color:#fff; }
-    .${P}btn.danger{ background:rgba(255,59,48,.16); color:#ff453a; border-color:transparent; }
 
     .${P}toast{
       position:fixed; left:50%; top:50%;
@@ -210,8 +166,6 @@
     return e;
   }
 
-  function truncate(s, n) { return s.length > n ? s.slice(0, n) + ' …' : s; }
-
   function toast(msg) {
     let t = document.querySelector('.' + P + 'toast');
     if (!t) { t = h('div', { class: P + 'toast' }); document.documentElement.appendChild(t); }
@@ -219,16 +173,6 @@
     t.classList.add(P + 'show');
     clearTimeout(t._t);
     t._t = setTimeout(() => t.classList.remove(P + 'show'), 1500);
-  }
-
-  async function copyText(text) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    } catch (_) {}
-    return copyTextSync(text);
   }
 
   /* iOS Safari 同步复制：textarea 必须保持可编辑状态，否则 execCommand 返回 true 但不实际复制 */
@@ -256,10 +200,6 @@
     return ok;
   }
 
-  function nodeTypeStr(n) {
-    return ({ 1: '元素 ELEMENT_NODE', 3: '文本 TEXT_NODE', 8: '注释 COMMENT_NODE', 9: '文档 DOCUMENT_NODE', 11: '文档片段 DOCUMENT_FRAGMENT_NODE' })[n] || ('#' + n);
-  }
-
   function describe(el) {
     if (!el || el.nodeType !== 1) return '';
     let s = el.tagName.toLowerCase();
@@ -271,47 +211,11 @@
     return s;
   }
 
-  function describeVisibility(el) {
-    const cs = getComputedStyle(el);
-    if (cs.display === 'none') return 'display:none (隐藏)';
-    if (cs.visibility !== 'visible') return 'visibility:' + cs.visibility;
-    if (parseFloat(cs.opacity) === 0) return 'opacity:0 (透明)';
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) return '0 尺寸 (不可见)';
-    return '可见';
-  }
-
-  function buildSelector(el) {
-    if (!el || el.nodeType !== 1) return '';
-    const esc = (s) => { try { return CSS.escape(s); } catch (_) { return s; } };
-    if (el.id) return '#' + esc(el.id);
-    const parts = [];
-    let cur = el, depth = 0;
-    while (cur && cur.nodeType === 1 && cur !== document.documentElement) {
-      let part = cur.tagName.toLowerCase();
-      if (cur.id) { parts.unshift('#' + esc(cur.id)); break; }
-      if (typeof cur.className === 'string' && cur.className.trim()) {
-        const cls = cur.className.trim().split(/\s+/).filter(Boolean);
-        if (cls.length) part += '.' + cls.map(esc).join('.');
-      }
-      const parent = cur.parentElement;
-      if (parent) {
-        const sibs = Array.from(parent.children).filter(n => n.tagName === cur.tagName);
-        if (sibs.length > 1) part += ':nth-of-type(' + (sibs.indexOf(cur) + 1) + ')';
-      }
-      parts.unshift(part);
-      cur = cur.parentElement;
-      if (++depth > 12) break;
-    }
-    return parts.join(' > ');
-  }
-
   /* ============================= 状态 ============================= */
   const state = {
     inspecting: false,
     target: null,
-    fab: null, hl: null, tip: null, panel: null,
-    body: null, tagChip: null, titleEl: null, upBtn: null,
+    fab: null, hl: null, tip: null, panel: null, body: null,
     moved: false, startX: 0, startY: 0, startTarget: null,
   };
 
@@ -450,26 +354,7 @@
     showPanel();
   }
 
-  function selectParent() {
-    if (!state.target) return;
-    const p = state.target.parentElement;
-    if (!p || p === document.documentElement) { toast('已到根元素'); return; }
-    selectElement(p);
-  }
-
   /* ============================= 面板构建 ============================= */
-  const STYLE_PROPS = [
-    'display', 'visibility', 'opacity', 'position', 'z-index',
-    'top', 'left', 'right', 'bottom', 'float',
-    'width', 'height', 'min-width', 'max-width', 'box-sizing',
-    'margin', 'padding', 'border', 'border-radius',
-    'color', 'background-color', 'background-image',
-    'font-size', 'font-weight', 'font-family', 'line-height', 'text-align', 'text-decoration',
-    'overflow', 'overflow-x', 'overflow-y',
-    'flex-direction', 'justify-content', 'align-items', 'flex-wrap', 'gap',
-    'transform', 'transition', 'animation', 'cursor', 'pointer-events', 'user-select', 'white-space'
-  ];
-
   function ensurePanel() {
     if (state.panel) return state.panel;
     const body = h('div', { class: P + 'body' });
@@ -537,77 +422,10 @@
     return h('div', { class: P + 'sec' }, [h('div', { class: P + 'sec-h', text: title }), content]);
   }
 
-  function kv(pairs) {
-    const items = [];
-    pairs.forEach(([k, v]) => {
-      items.push(h('div', { class: P + 'k', text: k }));
-      items.push(h('div', { class: P + 'v', text: String(v) }));
-    });
-    return h('div', { class: P + 'kv' }, items);
-  }
-
   function codeBox(text) {
     const box = h('div', { class: P + 'code' });
     box.textContent = text;
     return box;
-  }
-
-  function attrsBox(tagName, attrs) {
-    const lines = ['<' + tagName];
-    attrs.forEach(([n, v]) => { lines.push('  ' + n + (v !== '' ? '="' + v + '"' : '')); });
-    lines.push('>');
-    return codeBox(lines.join('\n'));
-  }
-
-  function computedBox(el) {
-    const cs = getComputedStyle(el);
-    const pairs = [];
-    STYLE_PROPS.forEach(p => {
-      const v = cs.getPropertyValue(p);
-      if (v !== '' && v !== 'auto' && v !== 'normal' && v !== 'none' && v !== '0s') pairs.push([p, v]);
-      else if (v !== '' && (p === 'display' || p === 'position' || p === 'overflow' || p === 'box-sizing' || p === 'text-align')) pairs.push([p, v]);
-    });
-    if (!pairs.length) return h('div', { class: P + 'v', text: '（无）' });
-    return kv(pairs);
-  }
-
-  function nodeRow(node, onclick) {
-    const tag = h('span', { class: P + 'tag', text: node.tagName.toLowerCase() });
-    const row = h('div', { class: P + 'node', onclick }, [tag]);
-    if (node.id) row.appendChild(h('span', { class: P + 'node-id', text: '#' + node.id }));
-    if (typeof node.className === 'string' && node.className.trim()) {
-      node.className.trim().split(/\s+/).slice(0, 3).forEach(c => {
-        if (c) row.appendChild(h('span', { class: P + 'node-cls', text: '.' + c }));
-      });
-    }
-    const r = node.getBoundingClientRect();
-    row.appendChild(h('span', { class: P + 'node-meta', text: Math.round(r.width) + '×' + Math.round(r.height) }));
-    return row;
-  }
-
-  function familyBox(el) {
-    const wrap = h('div', { class: P + 'sec' });
-    wrap.appendChild(h('div', { class: P + 'sec-h', text: 'DOM 家谱' }));
-
-    const parent = el.parentElement;
-    if (parent && parent !== document.documentElement) {
-      wrap.appendChild(h('div', { class: P + 'sec-sub', text: '父节点（点击切换）' }));
-      wrap.appendChild(nodeRow(parent, () => selectElement(parent)));
-    } else {
-      wrap.appendChild(h('div', { class: P + 'sec-sub', text: '父节点：无（已是根）' }));
-    }
-
-    const kids = Array.from(el.children);
-    const show = kids.slice(0, 5);
-    wrap.appendChild(h('div', { class: P + 'sec-sub', text: '子元素（' + kids.length + (kids.length > 5 ? '，显示前 5' : '') + '）' }));
-    if (show.length) show.forEach(k => wrap.appendChild(nodeRow(k, () => selectElement(k))));
-    else wrap.appendChild(h('div', { class: P + 'v', text: '（无子元素）' }));
-
-    if (parent) {
-      const sibs = Array.from(parent.children).filter(n => n !== el);
-      wrap.appendChild(h('div', { class: P + 'sec-sub', text: '兄弟元素：' + sibs.length + ' 个' }));
-    }
-    return wrap;
   }
 
   function renderPanel(el) {
@@ -616,42 +434,6 @@
     body.innerHTML = '';
     if (!el || el.nodeType !== 1) return;
     body.appendChild(section('outerHTML', codeBox(el.outerHTML)));
-  }
-
-  function copyAllInfo() {
-    if (!state.target) return;
-    const el = state.target;
-    const cs = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    const L = [];
-    L.push('=== iOS Safari 元素审查信息 ===');
-    L.push('时间: ' + new Date().toLocaleString());
-    L.push('URL: ' + location.href);
-    L.push('选择器: ' + buildSelector(el));
-    L.push('标签: ' + el.tagName.toLowerCase());
-    L.push('节点类型: ' + nodeTypeStr(el.nodeType));
-    L.push('可见性: ' + describeVisibility(el));
-    L.push('');
-    L.push('--- 尺寸与位置 ---');
-    L.push('offset: ' + el.offsetWidth + ' x ' + el.offsetHeight);
-    L.push('client: ' + el.clientWidth + ' x ' + el.clientHeight);
-    L.push('scroll: ' + el.scrollWidth + ' x ' + el.scrollHeight + ' (scrollTop=' + el.scrollTop + ', scrollLeft=' + el.scrollLeft + ')');
-    L.push('rect: x=' + r.x.toFixed(1) + ' y=' + r.y.toFixed(1) + ' w=' + r.width.toFixed(1) + ' h=' + r.height.toFixed(1));
-    L.push('rect: top=' + r.top.toFixed(1) + ' right=' + r.right.toFixed(1) + ' bottom=' + r.bottom.toFixed(1) + ' left=' + r.left.toFixed(1));
-    L.push('');
-    L.push('--- 属性 ---');
-    for (const a of el.attributes) L.push(a.name + '="' + a.value + '"');
-    L.push('');
-    L.push('--- 计算样式 ---');
-    STYLE_PROPS.forEach(p => { const v = cs.getPropertyValue(p); if (v !== '') L.push(p + ': ' + v + ';'); });
-    L.push('');
-    L.push('--- outerHTML ---');
-    L.push(el.outerHTML);
-    L.push('');
-    L.push('--- 家谱 ---');
-    if (el.parentElement && el.parentElement !== document.documentElement) L.push('父: ' + describe(el.parentElement));
-    L.push('子元素数: ' + el.children.length);
-    copyText(L.join('\n')).then(ok => ok ? toast('完整信息已复制') : toast('复制失败'));
   }
 
   /* ============================= 悬浮按钮 + 拖动 ============================= */
@@ -710,6 +492,16 @@
   function init() {
     state.fab = createFab();
     state.hl = createHighlight();
+
+    /* 窗口尺寸变化（旋转/缩放）时约束面板高度，防止拖动后溢出视窗 */
+    window.addEventListener('resize', () => {
+      if (!state.panel) return;
+      const maxH = window.innerHeight * 0.85;
+      const cur = state.panel.getBoundingClientRect().height;
+      if (cur > maxH) {
+        state.panel.style.height = maxH + 'px';
+      }
+    });
   }
 
   if (document.body) init();
