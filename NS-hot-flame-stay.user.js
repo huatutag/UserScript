@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.5
+// @version      1.3.6
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -31,12 +31,7 @@
         75% { transform: translateY(-4px) scale(calc(var(--flame-scale, 0.5) * 1.2)) rotate(-3deg); }
         100% { transform: translateY(0) scale(var(--flame-scale, 0.5)) rotate(0deg); }
       }
-      /* 尊重用户的动画偏好 */
-      @media (prefers-reduced-motion: reduce) {
-        .nsx-hot-flame {
-          animation: none;
-        }
-      }
+
       .nsx-hot-flame {
         --flame-scale: 1.0;
         display: inline-block;
@@ -47,7 +42,6 @@
         animation: nsx-flame-bounce 2s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
-        will-change: transform;
       }
       .nsx-hot-flame-l2 {
         animation-duration: 1.6s;
@@ -70,38 +64,26 @@
 
       .nsx-remind-blink {
         animation: nsx-remind-blink 1.2s ease-in-out infinite;
-        will-change: transform, opacity;
         transform-origin: center center;
       }
 
-      /* 尊重用户的动画偏好 */
-      @media (prefers-reduced-motion: reduce) {
-        .nsx-remind-blink {
-          animation: none;
-        }
-      }
-
-      /* 礼品图标闪烁动画 - 更显眼 */
+      /* 礼品图标闪烁动画 - 仅使用 transform/opacity 以走 GPU 合成 */
       @keyframes nsx-gift-blink {
         0%, 100% {
           opacity: 1;
           transform: scale(1.3) rotate(0deg);
-          filter: brightness(1);
         }
         25% {
           opacity: 0.9;
           transform: scale(1.4) rotate(-5deg);
-          filter: brightness(1.2);
         }
         50% {
           opacity: 0.8;
           transform: scale(1.5) rotate(5deg);
-          filter: brightness(1.3);
         }
         75% {
           opacity: 0.9;
           transform: scale(1.4) rotate(-3deg);
-          filter: brightness(1.2);
         }
       }
 
@@ -116,15 +98,18 @@
         animation: nsx-gift-blink 1.2s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
-        will-change: transform, opacity, filter;
         position: relative;
         z-index: 10;
       }
 
-      /* 尊重用户的动画偏好 */
+      /* 尊重用户的动画偏好 - 合并所有规则，减少 CSS 解析开销 */
       @media (prefers-reduced-motion: reduce) {
+        .nsx-hot-flame,
+        .nsx-remind-blink,
         .nsx-gift-icon {
           animation: none;
+        }
+        .nsx-gift-icon {
           transform: scale(1.2);
         }
       }
@@ -151,15 +136,18 @@
           // 检查标题是否包含"抽"或"奖"关键字
           const hasGiftKeyword = /[抽奖]/.test(titleText);
 
+          // 一次性查询现有图标，避免后续重复 DOM 查询
+          const existingGift = titleLink.querySelector('.nsx-gift-icon');
+          const existingFlame = titleLink.querySelector('.nsx-hot-flame');
+
           // 先添加礼品图标（永远在火焰之前）
-          if (hasGiftKeyword && !titleLink.querySelector('.nsx-gift-icon')) {
+          if (hasGiftKeyword && !existingGift) {
             const giftIcon = document.createElement('span');
             giftIcon.className = 'nsx-gift-icon';
             giftIcon.textContent = '🎁';
             giftIcon.title = '含有抽奖关键字';
 
             // 在火焰图标之前插入礼品图标
-            const existingFlame = titleLink.querySelector('.nsx-hot-flame');
             if (existingFlame) {
               titleLink.insertBefore(giftIcon, existingFlame);
             } else {
@@ -176,7 +164,7 @@
           const commentSpan = post.querySelector('span.info-comments-count > span');
           const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
           if (count >= 10) {
-            if (!titleLink.querySelector('.nsx-hot-flame')) {
+            if (!existingFlame) {
               const flame = document.createElement('span');
               const level = count >= 30 ? 3 : count >= 20 ? 2 : 1;
               flame.className = 'nsx-hot-flame' + (level > 1 ? ` nsx-hot-flame-l${level}` : '');
@@ -184,16 +172,11 @@
               flame.title = `${count} 条评论`;
 
               // 在礼品图标之后插入火焰图标（确保礼品在前）
-              const existingGift = titleLink.querySelector('.nsx-gift-icon');
-              if (existingGift) {
-                // 如果礼品图标存在，在礼品图标后面插入火焰
-                if (existingGift.nextSibling) {
-                  titleLink.insertBefore(flame, existingGift.nextSibling);
-                } else {
-                  titleLink.appendChild(flame);
-                }
+              // 注：existingGift 为本次循环开始时的快照；若本次新建了礼品且无旧火焰，
+              // 则礼品已被 append 到末尾，此处火焰同样 append 会自然落在礼品之后。
+              if (existingGift && existingGift.nextSibling) {
+                titleLink.insertBefore(flame, existingGift.nextSibling);
               } else {
-                // 如果没有礼品图标，直接追加到末尾
                 titleLink.appendChild(flame);
               }
 
@@ -226,21 +209,24 @@
     // 查找所有 .iconpark-icon 元素
     const icons = document.querySelectorAll('.iconpark-icon');
 
+    // 目标红色集合，用 Set 提升查找性能
+    const TARGET_COLORS = new Set(['rgb(243, 17, 17)', 'rgb(255, 0, 0)']);
+
     icons.forEach(icon => {
       try {
-        const computedStyle = window.getComputedStyle(icon);
-        const color = computedStyle.color;
+        // 先检查零开销的内联样式，命中则无需触发 getComputedStyle（避免强制重排/布局抖动）
+        let isRed = TARGET_COLORS.has(icon.style.color);
+        if (!isRed) {
+          // 仅在内联样式未命中时才回退到计算样式
+          isRed = TARGET_COLORS.has(window.getComputedStyle(icon).color);
+        }
 
-        // 检查颜色是否为 rgb(243, 17, 17) 或类似红色
-        if (color === 'rgb(243, 17, 17)' || color === 'rgb(255, 0, 0)' || icon.style.color === 'rgb(243, 17, 17)') {
-          // 避免重复添加动画
-          if (!icon.classList.contains('nsx-remind-blink')) {
-            icon.classList.add('nsx-remind-blink');
+        if (isRed && !icon.classList.contains('nsx-remind-blink')) {
+          icon.classList.add('nsx-remind-blink');
 
-            // 使用 IntersectionObserver 暂停不可见元素的动画
-            if (flameObserver) {
-              flameObserver.observe(icon);
-            }
+          // 使用 IntersectionObserver 暂停不可见元素的动画
+          if (flameObserver) {
+            flameObserver.observe(icon);
           }
         }
       } catch (e) {
