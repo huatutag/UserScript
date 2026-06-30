@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.0.1
+// @version      1.0.2
 // @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮、节点信息、计算样式、HTML 预览、DOM 家谱导航、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
@@ -81,8 +81,8 @@
     }
     .${P}panel.${P}show{ transform:translateY(0); }
 
-    .${P}grip{ flex:0 0 auto; width:100%; padding:8px 0 4px; display:flex; justify-content:center; }
-    .${P}grip::after{ content:''; width:38px; height:5px; border-radius:3px; background:rgba(235,235,245,.3); }
+    .${P}grip{ flex:0 0 auto; width:100%; padding:10px 0 6px; display:flex; justify-content:center; touch-action:none; cursor:ns-resize; }
+    .${P}grip::after{ content:''; width:42px; height:5px; border-radius:3px; background:rgba(235,235,245,.35); }
 
     .${P}head{
       flex:0 0 auto; padding:4px 16px 10px;
@@ -228,16 +228,29 @@
         return true;
       }
     } catch (_) {}
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      return ok;
-    } catch (_) { return false; }
+    return copyTextSync(text);
+  }
+
+  /* iOS Safari 同步复制：必须在用户手势同步上下文中执行 execCommand */
+  function copyTextSync(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;font-size:16px;';
+    document.body.appendChild(ta);
+    ta.contentEditable = 'true';
+    ta.readOnly = false;
+    const range = document.createRange();
+    range.selectNodeContents(ta);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    ta.setSelectionRange(0, text.length);
+    ta.readOnly = true;
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
   }
 
   function nodeTypeStr(n) {
@@ -445,9 +458,9 @@
     const body = h('div', { class: P + 'body' });
     const grip = h('div', { class: P + 'grip' });
 
-    const copyBtn = h('button', { class: P + 'btn primary', onclick: async () => {
+    const copyBtn = h('button', { class: P + 'btn primary', onclick: () => {
       const s = state.target ? state.target.outerHTML : '';
-      (await copyText(s)) ? toast('outerHTML 已复制') : toast('复制失败');
+      copyTextSync(s) ? toast('outerHTML 已复制') : toast('复制失败');
     } }, '复制 outerHTML');
     const acts = h('div', { class: P + 'acts' }, [copyBtn]);
 
@@ -456,6 +469,35 @@
 
     state.panel = panel;
     state.body = body;
+
+    /* grip 拖动调整面板高度 */
+    let dragging = false, startY = 0, startH = 0;
+    grip.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startH = panel.getBoundingClientRect().height;
+      try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dy = e.clientY - startY;
+      let h = startH - dy;
+      const maxH = window.innerHeight * 0.85;
+      const minH = 120;
+      h = Math.max(minH, Math.min(maxH, h));
+      panel.style.height = h + 'px';
+      panel.style.maxHeight = 'none';
+      e.preventDefault();
+    });
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      try { grip.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    grip.addEventListener('pointerup', endDrag);
+    grip.addEventListener('pointercancel', endDrag);
+
     return panel;
   }
 
