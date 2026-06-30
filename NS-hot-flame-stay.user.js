@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.2
+// @version      1.3.3
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -15,107 +15,6 @@
 
   // ========== 将 Observer 提升到外部作用域 ==========
   let flameObserver = null;
-
-  // ========== 访问历史记录功能 ==========
-  const VISITED_KEY = 'nsx-visited-posts';
-  const MAX_HISTORY = 20;
-
-  // 获取已访问帖子列表
-  function getVisitedPosts() {
-    try {
-      return JSON.parse(localStorage.getItem(VISITED_KEY) || '[]');
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // 记录访问的帖子
-  function recordVisit(postId) {
-    if (!postId) return;
-
-    let visited = getVisitedPosts();
-
-    // 去重：移除已存在的 ID
-    visited = visited.filter(id => id !== postId);
-
-    // 将新访问的帖子添加到开头
-    visited.unshift(postId);
-
-    // 保持最多 20 条记录
-    if (visited.length > MAX_HISTORY) {
-      visited = visited.slice(0, MAX_HISTORY);
-    }
-
-    try {
-      localStorage.setItem(VISITED_KEY, JSON.stringify(visited));
-    } catch (e) {
-      // localStorage 可能已满，清除旧数据
-      try {
-        localStorage.removeItem(VISITED_KEY);
-        localStorage.setItem(VISITED_KEY, JSON.stringify(visited.slice(0, 10)));
-      } catch (e2) {
-        // 静默处理
-      }
-    }
-  }
-
-  // 标记已访问的帖子
-  function markVisitedPosts() {
-    const visited = getVisitedPosts();
-    if (visited.length === 0) return;
-
-    // 只选择未处理的帖子
-    const posts = document.querySelectorAll('li.post-list-item:not([data-visited-checked="1"])');
-
-    posts.forEach(post => {
-      try {
-        const titleLink = post.querySelector('div.post-title > a');
-        if (titleLink) {
-          const match = titleLink.href.match(/\/post\/(\d+)/);
-          if (match && visited.includes(match[1])) {
-            // 添加置灰效果
-            post.style.opacity = '0.55';
-            post.style.filter = 'grayscale(0.6)';
-            post.style.transition = 'opacity 0.3s, filter 0.3s';
-            post.title = (post.title || '') + ' [已访问]';
-
-            // 在标题前添加已读标记
-            if (!titleLink.querySelector('.nsx-visited-mark')) {
-              const mark = document.createElement('span');
-              mark.className = 'nsx-visited-mark';
-              mark.textContent = '✓ ';
-              mark.style.cssText = 'color: #999; font-size: 0.9em; margin-right: 2px;';
-              titleLink.insertBefore(mark, titleLink.firstChild);
-            }
-          }
-        }
-      } catch (e) {
-        // 静默处理错误
-      }
-
-      // 标记为已检查
-      post.dataset.visitedChecked = '1';
-    });
-  }
-
-  // 监听帖子点击事件，记录访问
-  function setupVisitTracker() {
-    // 使用事件委托，提升性能
-    document.addEventListener('click', (e) => {
-      try {
-        // 查找最近的帖子链接
-        const link = e.target.closest('a[href*="/post/"]');
-        if (link) {
-          const match = link.href.match(/\/post\/(\d+)/);
-          if (match) {
-            recordVisit(match[1]);
-          }
-        }
-      } catch (e) {
-        // 静默处理错误
-      }
-    }, true); // 使用捕获阶段，确保在页面跳转前执行
-  }
 
   // ========== 帖子热度火焰指示器 ==========
   function hotPostFlame() {
@@ -157,7 +56,7 @@
         animation-duration: 1.2s;
       }
 
-      /* 提醒图标闪烁动画 - 性能优化版 */
+      /* 提醒图标闪烁动画 */
       @keyframes nsx-remind-blink {
         0%, 100% {
           opacity: 1;
@@ -224,9 +123,6 @@
     // 静态页面只需执行一次
     addFlames();
 
-    // 标记已访问的帖子
-    markVisitedPosts();
-
     // 处理提醒图标的闪烁效果
     addRemindBlink();
   }
@@ -269,9 +165,6 @@
       hotPostFlame();
       console.log('[Nodeseek 热度火焰] 功能已启动');
     };
-
-    // 启动访问跟踪
-    setupVisitTracker();
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(run));
