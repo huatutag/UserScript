@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.7
+// @version      1.1.8
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -99,14 +99,26 @@
     debugIconparkIcons();
   }
 
+  // ========== 工具函数 ==========
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // ========== 调试功能 ==========
   function debugIconparkIcons() {
-    // 精确选择：带 use 子元素的 iconpark-icon
+    // 精确选择：带 use 子元素且 href 包含 #remind 的 iconpark-icon
     const icons = document.querySelectorAll('.iconpark-icon');
-    const targetIcons = Array.from(icons).filter(icon => icon.querySelector('use'));
+    const targetIcons = Array.from(icons).filter(icon => {
+      const useEl = icon.querySelector('use');
+      if (!useEl) return false;
+      const href = useEl.getAttribute('href');
+      return href && href.includes('#remind');
+    });
 
     if (targetIcons.length === 0) {
-      showToast('未找到带 use 子元素的 iconpark-icon', 'warning');
+      showToast('未找到 href 包含 #remind 的 iconpark-icon', 'warning');
       return;
     }
 
@@ -121,6 +133,10 @@
       const stroke = computedStyle.stroke !== 'none' ? computedStyle.stroke : 'none';
       const color = computedStyle.color;
 
+      // 获取元素及其子元素的 HTML 源代码
+      const outerHTML = icon.outerHTML;
+      const innerHTML = icon.innerHTML;
+
       // 高亮标记元素
       icon.style.outline = '2px solid red';
       icon.style.outlineOffset = '2px';
@@ -131,6 +147,8 @@
         fill: fill,
         stroke: stroke,
         color: color,
+        outerHTML: outerHTML,
+        innerHTML: innerHTML,
         element: icon
       };
     });
@@ -139,7 +157,7 @@
     createDebugPanel(infoList);
 
     // 显示简要提示
-    showToast(`找到 ${targetIcons.length} 个目标图标，已高亮标记`, 'info');
+    showToast(`找到 ${targetIcons.length} 个 #remind 图标，已高亮标记`, 'info');
   }
 
   function createDebugPanel(infoList) {
@@ -176,6 +194,18 @@
           <div>fill: <span style="color: ${info.fill !== 'none' ? '#f5222d' : '#999'};">${info.fill}</span></div>
           <div>stroke: <span style="color: ${info.stroke !== 'none' ? '#f5222d' : '#999'};">${info.stroke}</span></div>
           <div>color: <span style="color: #f5222d;">${info.color}</span></div>
+
+          <details style="margin-top: 8px; font-size: 11px;">
+            <summary style="cursor: pointer; color: #1890ff;">查看 HTML 源代码</summary>
+            <div style="margin-top: 4px;">
+              <div style="font-weight: bold; margin-top: 4px;">outerHTML:</div>
+              <pre style="background: #fff; padding: 4px; border-radius: 2px; overflow-x: auto; font-size: 10px; max-height: 100px; overflow-y: auto;">${escapeHtml(info.outerHTML)}</pre>
+
+              <div style="font-weight: bold; margin-top: 4px;">innerHTML:</div>
+              <pre style="background: #fff; padding: 4px; border-radius: 2px; overflow-x: auto; font-size: 10px; max-height: 100px; overflow-y: auto;">${escapeHtml(info.innerHTML)}</pre>
+            </div>
+          </details>
+
           <button onclick="event.stopPropagation(); this.parentElement.style.display='none'" style="margin-top: 4px; padding: 2px 8px; font-size: 11px;">关闭此项</button>
         </div>
       `;
