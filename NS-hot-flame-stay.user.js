@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.5
+// @version      1.1.6
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -95,85 +95,136 @@
     // 静态页面只需执行一次
     addFlames();
 
-    // 调试功能：输出 iconpark-icon 元素的颜色信息
+    // 调试功能：分析 iconpark-icon 元素（带 use 子元素）
     debugIconparkIcons();
   }
 
   // ========== 调试功能 ==========
   function debugIconparkIcons() {
+    // 精确选择：带 use 子元素的 iconpark-icon
     const icons = document.querySelectorAll('.iconpark-icon');
-    if (icons.length === 0) {
-      console.log('[Nodeseek 热度火焰] 未找到 iconpark-icon 元素');
+    const targetIcons = Array.from(icons).filter(icon => icon.querySelector('use'));
+
+    if (targetIcons.length === 0) {
+      showToast('未找到带 use 子元素的 iconpark-icon', 'warning');
       return;
     }
 
-    console.group(`[Nodeseek 热度火焰] 找到 ${icons.length} 个 iconpark-icon 元素：`);
-    
-    icons.forEach((icon, index) => {
+    // 收集信息并在页面上显示
+    const infoList = targetIcons.map((icon, index) => {
       const computedStyle = window.getComputedStyle(icon);
-      const info = {
-        元素: icon,
-        索引: index,
-        color: computedStyle.color,
-        fill: computedStyle.fill,
-        stroke: computedStyle.stroke,
-        backgroundColor: computedStyle.backgroundColor,
-        opacity: computedStyle.opacity,
-        className: icon.className,
-        innerHTML: icon.innerHTML.substring(0, 100) + (icon.innerHTML.length > 100 ? '...' : '')
-      };
-      
-      console.log(`%c图标 ${index + 1}`, 'font-weight: bold; color: #1890ff;');
-      console.log('详细信息:', info);
-      
-      // 如果是 SVG 元素，还输出 SVG 相关的属性
-      if (icon.tagName.toLowerCase() === 'svg' || icon.querySelector('svg')) {
-        const svg = icon.tagName.toLowerCase() === 'svg' ? icon : icon.querySelector('svg');
-        console.log('SVG 信息:', {
-          width: svg.getAttribute('width'),
-          height: svg.getAttribute('height'),
-          viewBox: svg.getAttribute('viewBox'),
-          fill: svg.getAttribute('fill'),
-          stroke: svg.getAttribute('stroke')
-        });
-      }
-    });
-    
-    console.groupEnd();
+      const useEl = icon.querySelector('use');
+      const href = useEl ? useEl.getAttribute('href') : 'N/A';
 
-    // 在页面上显示提示
-    showToast(`找到 ${icons.length} 个 iconpark-icon 元素，详细信息请查看控制台`);
+      // 尝试获取实际颜色（检查 fill, stroke, color）
+      const fill = computedStyle.fill !== 'none' ? computedStyle.fill : 'none';
+      const stroke = computedStyle.stroke !== 'none' ? computedStyle.stroke : 'none';
+      const color = computedStyle.color;
+
+      // 高亮标记元素
+      icon.style.outline = '2px solid red';
+      icon.style.outlineOffset = '2px';
+
+      return {
+        index: index + 1,
+        href: href,
+        fill: fill,
+        stroke: stroke,
+        color: color,
+        element: icon
+      };
+    });
+
+    // 在页面上创建信息面板
+    createDebugPanel(infoList);
+
+    // 显示简要提示
+    showToast(`找到 ${targetIcons.length} 个目标图标，已高亮标记`, 'info');
   }
 
-  function showToast(message) {
+  function createDebugPanel(infoList) {
+    // 移除旧面板
+    const oldPanel = document.getElementById('nsx-debug-panel');
+    if (oldPanel) oldPanel.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'nsx-debug-panel';
+    panel.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      border: 2px solid #1890ff;
+      border-radius: 8px;
+      padding: 16px;
+      max-width: 400px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 99999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+    `;
+
+    let html = '<h4 style="margin: 0 0 12px 0; color: #1890ff;">🔍 Iconpark 图标分析</h4>';
+
+    infoList.forEach(info => {
+      html += `
+        <div style="margin-bottom: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+          <div style="font-weight: bold; margin-bottom: 4px;">图标 ${info.index}</div>
+          <div>href: <code style="color: #52c41a;">${info.href}</code></div>
+          <div>fill: <span style="color: ${info.fill !== 'none' ? '#f5222d' : '#999'};">${info.fill}</span></div>
+          <div>stroke: <span style="color: ${info.stroke !== 'none' ? '#f5222d' : '#999'};">${info.stroke}</span></div>
+          <div>color: <span style="color: #f5222d;">${info.color}</span></div>
+          <button onclick="this.parentElement.style.display='none'" style="margin-top: 4px; padding: 2px 8px; font-size: 11px;">关闭此项</button>
+        </div>
+      `;
+    });
+
+    html += '<button onclick="this.parentElement.remove()" style="width: 100%; padding: 8px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer;">关闭面板</button>';
+
+    panel.innerHTML = html;
+    document.body.appendChild(panel);
+  }
+
+  function showToast(message, type = 'info') {
+    const colors = {
+      info: '#1890ff',
+      warning: '#faad14',
+      error: '#ff4d4f'
+    };
+
     const toast = document.createElement('div');
     toast.textContent = message;
     toast.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
-      background: #1890ff;
+      background: ${colors[type] || colors.info};
       color: white;
       padding: 12px 20px;
       border-radius: 6px;
       font-size: 14px;
-      z-index: 99999;
+      z-index: 100000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       animation: nsx-toast-in 0.3s ease;
     `;
-    
-    // 添加入场动画
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes nsx-toast-in {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
-    
+
+    // 添加动画样式（如果不存在）
+    if (!document.getElementById('nsx-toast-style')) {
+      const style = document.createElement('style');
+      style.id = 'nsx-toast-style';
+      style.textContent = `
+        @keyframes nsx-toast-in {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     document.body.appendChild(toast);
-    
+
     // 3秒后自动移除
     setTimeout(() => {
       toast.style.animation = 'nsx-toast-in 0.3s ease reverse';
