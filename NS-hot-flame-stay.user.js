@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.4
+// @version      1.1.5
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
