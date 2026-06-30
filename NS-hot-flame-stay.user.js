@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.0
+// @version      1.3.1
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -12,6 +12,9 @@
 
 (function () {
   'use strict';
+
+  // ========== 将 Observer 提升到外部作用域 ==========
+  let flameObserver = null;
 
   // ========== 帖子热度火焰指示器 ==========
   function hotPostFlame() {
@@ -53,33 +56,21 @@
         animation-duration: 1.2s;
       }
 
-      /* 提醒图标闪烁动画 - 更明显的效果 */
+      /* 提醒图标闪烁动画 - 性能优化版 */
       @keyframes nsx-remind-blink {
         0%, 100% {
           opacity: 1;
-          filter: brightness(1) drop-shadow(0 0 0 transparent);
           transform: scale(1);
         }
-        25% {
-          opacity: 0.8;
-          filter: brightness(1.3) drop-shadow(0 0 3px rgba(243, 17, 17, 0.7));
-          transform: scale(1.05);
-        }
         50% {
-          opacity: 0.9;
-          filter: brightness(1.6) drop-shadow(0 0 6px rgba(243, 17, 17, 0.9));
-          transform: scale(1.1);
-        }
-        75% {
-          opacity: 0.8;
-          filter: brightness(1.3) drop-shadow(0 0 3px rgba(243, 17, 17, 0.7));
-          transform: scale(1.05);
+          opacity: 0.6;
+          transform: scale(1.15);
         }
       }
 
       .nsx-remind-blink {
         animation: nsx-remind-blink 1.2s ease-in-out infinite;
-        will-change: opacity, filter, transform;
+        will-change: transform, opacity;
         transform-origin: center center;
       }
 
@@ -93,7 +84,7 @@
     document.head.appendChild(style);
 
     // 用于暂停不可见火焰动画的 IntersectionObserver
-    const flameObserver = new IntersectionObserver((entries) => {
+    flameObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         entry.target.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused';
       });
@@ -117,7 +108,9 @@
               titleLink.appendChild(flame);
 
               // 立即观察新创建的火焰
-              flameObserver.observe(flame);
+              if (flameObserver) {
+                flameObserver.observe(flame);
+              }
             }
           }
         } catch (e) {
@@ -155,7 +148,9 @@
             icon.classList.add('nsx-remind-blink');
 
             // 使用 IntersectionObserver 暂停不可见元素的动画
-            flameObserver.observe(icon);
+            if (flameObserver) {
+              flameObserver.observe(icon);
+            }
           }
         }
       } catch (e) {
