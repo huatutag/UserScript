@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.4
+// @version      1.3.5
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -81,35 +81,51 @@
         }
       }
 
-      /* 礼品图标闪烁动画 */
+      /* 礼品图标闪烁动画 - 更显眼 */
       @keyframes nsx-gift-blink {
         0%, 100% {
           opacity: 1;
-          transform: scale(1);
+          transform: scale(1.3) rotate(0deg);
+          filter: brightness(1);
+        }
+        25% {
+          opacity: 0.9;
+          transform: scale(1.4) rotate(-5deg);
+          filter: brightness(1.2);
         }
         50% {
-          opacity: 0.5;
-          transform: scale(1.2);
+          opacity: 0.8;
+          transform: scale(1.5) rotate(5deg);
+          filter: brightness(1.3);
+        }
+        75% {
+          opacity: 0.9;
+          transform: scale(1.4) rotate(-3deg);
+          filter: brightness(1.2);
         }
       }
 
       .nsx-gift-icon {
-        --gift-scale: 1.0;
+        --gift-scale: 1.3;
         display: inline-block;
         margin-left: 4px;
-        font-size: 1em;
+        margin-right: 2px;
+        font-size: 1.2em;
         transform: scale(var(--gift-scale));
         transform-origin: left center;
-        animation: nsx-gift-blink 1.5s ease-in-out infinite;
+        animation: nsx-gift-blink 1.2s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
-        will-change: transform, opacity;
+        will-change: transform, opacity, filter;
+        position: relative;
+        z-index: 10;
       }
 
       /* 尊重用户的动画偏好 */
       @media (prefers-reduced-motion: reduce) {
         .nsx-gift-icon {
           animation: none;
+          transform: scale(1.2);
         }
       }
     `;
@@ -135,12 +151,13 @@
           // 检查标题是否包含"抽"或"奖"关键字
           const hasGiftKeyword = /[抽奖]/.test(titleText);
 
-          // 添加礼品图标（如果有关键字且未添加）
+          // 先添加礼品图标（永远在火焰之前）
           if (hasGiftKeyword && !titleLink.querySelector('.nsx-gift-icon')) {
             const giftIcon = document.createElement('span');
             giftIcon.className = 'nsx-gift-icon';
             giftIcon.textContent = '🎁';
             giftIcon.title = '含有抽奖关键字';
+
             // 在火焰图标之前插入礼品图标
             const existingFlame = titleLink.querySelector('.nsx-hot-flame');
             if (existingFlame) {
@@ -155,7 +172,7 @@
             }
           }
 
-          // 添加火焰图标
+          // 后添加火焰图标（永远在礼品之后）
           const commentSpan = post.querySelector('span.info-comments-count > span');
           const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
           if (count >= 10) {
@@ -166,11 +183,17 @@
               flame.textContent = '🔥'.repeat(level);
               flame.title = `${count} 条评论`;
 
-              // 在礼品图标之后插入火焰图标（如果礼品图标存在）
+              // 在礼品图标之后插入火焰图标（确保礼品在前）
               const existingGift = titleLink.querySelector('.nsx-gift-icon');
-              if (existingGift && existingGift.nextSibling) {
-                titleLink.insertBefore(flame, existingGift.nextSibling);
+              if (existingGift) {
+                // 如果礼品图标存在，在礼品图标后面插入火焰
+                if (existingGift.nextSibling) {
+                  titleLink.insertBefore(flame, existingGift.nextSibling);
+                } else {
+                  titleLink.appendChild(flame);
+                }
               } else {
+                // 如果没有礼品图标，直接追加到末尾
                 titleLink.appendChild(flame);
               }
 
