@@ -80,6 +80,38 @@
           animation: none;
         }
       }
+
+      /* 礼品图标闪烁动画 */
+      @keyframes nsx-gift-blink {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.2);
+        }
+      }
+
+      .nsx-gift-icon {
+        --gift-scale: 1.0;
+        display: inline-block;
+        margin-left: 4px;
+        font-size: 1em;
+        transform: scale(var(--gift-scale));
+        transform-origin: left center;
+        animation: nsx-gift-blink 1.5s ease-in-out infinite;
+        cursor: default;
+        vertical-align: middle;
+        will-change: transform, opacity;
+      }
+
+      /* 尊重用户的动画偏好 */
+      @media (prefers-reduced-motion: reduce) {
+        .nsx-gift-icon {
+          animation: none;
+        }
+      }
     `;
     document.head.appendChild(style);
 
@@ -95,17 +127,52 @@
       const posts = document.querySelectorAll('li.post-list-item:not([data-flame-added="1"])');
       posts.forEach(post => {
         try {
+          const titleLink = post.querySelector('div.post-title > a');
+          if (!titleLink) return;
+
+          const titleText = titleLink.textContent || '';
+
+          // 检查标题是否包含"抽"或"奖"关键字
+          const hasGiftKeyword = /[抽奖]/.test(titleText);
+
+          // 添加礼品图标（如果有关键字且未添加）
+          if (hasGiftKeyword && !titleLink.querySelector('.nsx-gift-icon')) {
+            const giftIcon = document.createElement('span');
+            giftIcon.className = 'nsx-gift-icon';
+            giftIcon.textContent = '🎁';
+            giftIcon.title = '含有抽奖关键字';
+            // 在火焰图标之前插入礼品图标
+            const existingFlame = titleLink.querySelector('.nsx-hot-flame');
+            if (existingFlame) {
+              titleLink.insertBefore(giftIcon, existingFlame);
+            } else {
+              titleLink.appendChild(giftIcon);
+            }
+
+            // 观察礼品图标
+            if (flameObserver) {
+              flameObserver.observe(giftIcon);
+            }
+          }
+
+          // 添加火焰图标
           const commentSpan = post.querySelector('span.info-comments-count > span');
           const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
           if (count >= 10) {
-            const titleLink = post.querySelector('div.post-title > a');
-            if (titleLink && !titleLink.querySelector('.nsx-hot-flame')) {
+            if (!titleLink.querySelector('.nsx-hot-flame')) {
               const flame = document.createElement('span');
               const level = count >= 30 ? 3 : count >= 20 ? 2 : 1;
               flame.className = 'nsx-hot-flame' + (level > 1 ? ` nsx-hot-flame-l${level}` : '');
               flame.textContent = '🔥'.repeat(level);
               flame.title = `${count} 条评论`;
-              titleLink.appendChild(flame);
+
+              // 在礼品图标之后插入火焰图标（如果礼品图标存在）
+              const existingGift = titleLink.querySelector('.nsx-gift-icon');
+              if (existingGift && existingGift.nextSibling) {
+                titleLink.insertBefore(flame, existingGift.nextSibling);
+              } else {
+                titleLink.appendChild(flame);
+              }
 
               // 立即观察新创建的火焰
               if (flameObserver) {
