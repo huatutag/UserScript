@@ -49,17 +49,21 @@
       .nsx-hot-flame {
         display: inline-block;
         margin-left: 4px;
-        font-size: 12px;
+        font-size: 1em;
+        transform: scale(0.7);
+        transform-origin: left center;
         animation: nsx-flame-bounce 1.2s ease-in-out infinite, nsx-flame-glow 1.5s ease-in-out infinite, nsx-flame-flicker 0.8s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
       }
       .nsx-hot-flame-l2 {
-        font-size: 14px;
+        transform: scale(0.85);
+        transform-origin: left center;
         animation-duration: 0.9s, 1.2s, 0.6s;
       }
       .nsx-hot-flame-l3 {
-        font-size: 16px;
+        transform: scale(1);
+        transform-origin: left center;
         animation-duration: 0.7s, 1s, 0.5s;
       }
     `;
