@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.9
+// @version      1.2.0
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -55,15 +55,34 @@
         animation-duration: 1.2s;
       }
 
-      /* 提醒图标闪烁动画 */
+      /* 提醒图标闪烁动画 - 更明显的效果 */
       @keyframes nsx-remind-blink {
-        0%, 100% { opacity: 1; filter: brightness(1); }
-        50% { opacity: 0.6; filter: brightness(1.5); }
+        0%, 100% {
+          opacity: 1;
+          filter: brightness(1) drop-shadow(0 0 0 transparent);
+          transform: scale(1);
+        }
+        25% {
+          opacity: 0.8;
+          filter: brightness(1.3) drop-shadow(0 0 3px rgba(243, 17, 17, 0.7));
+          transform: scale(1.05);
+        }
+        50% {
+          opacity: 0.9;
+          filter: brightness(1.6) drop-shadow(0 0 6px rgba(243, 17, 17, 0.9));
+          transform: scale(1.1);
+        }
+        75% {
+          opacity: 0.8;
+          filter: brightness(1.3) drop-shadow(0 0 3px rgba(243, 17, 17, 0.7));
+          transform: scale(1.05);
+        }
       }
 
       .nsx-remind-blink {
-        animation: nsx-remind-blink 1.5s ease-in-out infinite;
-        will-change: opacity, filter;
+        animation: nsx-remind-blink 1.2s ease-in-out infinite;
+        will-change: opacity, filter, transform;
+        transform-origin: center center;
       }
 
       /* 尊重用户的动画偏好 */
