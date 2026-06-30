@@ -50,19 +50,19 @@
         display: inline-block;
         margin-left: 4px;
         font-size: 1em;
-        transform: scale(0.7);
+        transform: scale(0.5);
         transform-origin: left center;
         animation: nsx-flame-bounce 5s ease-in-out infinite, nsx-flame-glow 6s ease-in-out infinite, nsx-flame-flicker 3s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
       }
       .nsx-hot-flame-l2 {
-        transform: scale(0.85);
+        transform: scale(0.65);
         transform-origin: left center;
         animation-duration: 4s, 5s, 2.5s;
       }
       .nsx-hot-flame-l3 {
-        transform: scale(1);
+        transform: scale(0.8);
         transform-origin: left center;
         animation-duration: 3s, 4s, 2s;
       }
