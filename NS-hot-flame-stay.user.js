@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.2
+// @version      1.1.3
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -37,7 +37,7 @@
         }
       }
       .nsx-hot-flame {
-        --flame-scale: 0.7;
+        --flame-scale: 1.0;
         display: inline-block;
         margin-left: 4px;
         font-size: 1em;
@@ -49,11 +49,9 @@
         will-change: transform;
       }
       .nsx-hot-flame-l2 {
-        --flame-scale: 0.85;
         animation-duration: 1.6s;
       }
       .nsx-hot-flame-l3 {
-        --flame-scale: 1.0;
         animation-duration: 1.2s;
       }
     `;
