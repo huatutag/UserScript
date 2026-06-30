@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.1.8
+// @version      1.1.9
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -54,6 +54,24 @@
       .nsx-hot-flame-l3 {
         animation-duration: 1.2s;
       }
+
+      /* 提醒图标闪烁动画 */
+      @keyframes nsx-remind-blink {
+        0%, 100% { opacity: 1; filter: brightness(1); }
+        50% { opacity: 0.6; filter: brightness(1.5); }
+      }
+
+      .nsx-remind-blink {
+        animation: nsx-remind-blink 1.5s ease-in-out infinite;
+        will-change: opacity, filter;
+      }
+
+      /* 尊重用户的动画偏好 */
+      @media (prefers-reduced-motion: reduce) {
+        .nsx-remind-blink {
+          animation: none;
+        }
+      }
     `;
     document.head.appendChild(style);
 
@@ -95,8 +113,41 @@
     // 静态页面只需执行一次
     addFlames();
 
+    // 处理提醒图标的闪烁效果
+    addRemindBlink();
+
     // 调试功能：分析 iconpark-icon 元素（带 use 子元素）
     debugIconparkIcons();
+  }
+
+  // ========== 提醒图标闪烁效果 ==========
+  function addRemindBlink() {
+    // 防止重复添加
+    if (document.getElementById('nsx-remind-processed')) return;
+    document.getElementById('nsx-flame-style').setAttribute('data-remind', '1');
+
+    // 查找所有 .iconpark-icon 元素
+    const icons = document.querySelectorAll('.iconpark-icon');
+
+    icons.forEach(icon => {
+      try {
+        const computedStyle = window.getComputedStyle(icon);
+        const color = computedStyle.color;
+
+        // 检查颜色是否为 rgb(243, 17, 17) 或类似红色
+        if (color === 'rgb(243, 17, 17)' || color === 'rgb(255, 0, 0)' || icon.style.color === 'rgb(243, 17, 17)') {
+          // 避免重复添加动画
+          if (!icon.classList.contains('nsx-remind-blink')) {
+            icon.classList.add('nsx-remind-blink');
+
+            // 使用 IntersectionObserver 暂停不可见元素的动画
+            flameObserver.observe(icon);
+          }
+        }
+      } catch (e) {
+        console.warn('[Nodeseek 热度火焰] 处理提醒图标时出错:', e);
+      }
+    });
   }
 
   // ========== 工具函数 ==========
