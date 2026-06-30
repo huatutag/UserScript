@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         iOS Safari 元素审查器 (Edge F12 风格)
 // @namespace    https://nodeseek-pro/ios-inspector
-// @version      1.1.0
+// @version      1.1.1
 // @description  在 iOS Safari 上实现类似 Edge/Chrome F12 审查元素的功能：触摸高亮选中元素、展示 outerHTML、拖动调整面板高度、一键复制，界面针对手机端优化。
 // @author       You
 // @match        *://*/*
@@ -41,7 +41,7 @@
     .${P}hl{
       position:fixed; z-index:2147483646; pointer-events:none;
       border:2px solid #0a84ff; background:rgba(10,132,255,.18);
-      border-radius:2px; transition:all .06s ease-out;
+      border-radius:2px; transition:top .06s ease-out,left .06s ease-out,width .06s ease-out,height .06s ease-out;
     }
     .${P}hl-badge{
       position:absolute; top:-22px; left:-2px;
@@ -49,18 +49,6 @@
       font:600 11px/1.4 -apple-system,system-ui,sans-serif;
       padding:2px 6px; border-radius:4px; white-space:nowrap;
       max-width:240px; overflow:hidden; text-overflow:ellipsis;
-    }
-
-    .${P}tip{
-      position:fixed; top:calc(8px + env(safe-area-inset-top,0px));
-      left:50%; transform:translateX(-50%);
-      background:rgba(20,20,22,.92); color:#e5e5ea;
-      font:600 13px/1 -apple-system,system-ui,sans-serif;
-      padding:10px 16px; border-radius:999px;
-      box-shadow:0 4px 14px rgba(0,0,0,.4);
-      z-index:2147483645; pointer-events:none;
-      backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-      white-space:nowrap; max-width:90vw; overflow:hidden; text-overflow:ellipsis;
     }
 
     .${P}panel{
@@ -215,8 +203,9 @@
   const state = {
     inspecting: false,
     target: null,
-    fab: null, hl: null, tip: null, panel: null, body: null,
+    fab: null, hl: null, panel: null, body: null,
     moved: false, startX: 0, startY: 0, startTarget: null,
+    rafId: 0, lastX: 0, lastY: 0, /* RAF 节流用 */
   };
 
   /* ============================= 高亮 ============================= */
@@ -245,7 +234,7 @@
   function isOurUI(el) {
     let n = el;
     while (n && n !== document.documentElement) {
-      if (n === state.fab || n === (state.hl && state.hl.box) || n === state.panel || n === state.tip) return true;
+      if (n === state.fab || n === (state.hl && state.hl.box) || n === state.panel) return true;
       const cls = n.className;
       if (typeof cls === 'string' && cls.indexOf(P) >= 0) return true;
       n = n.parentElement;
@@ -288,8 +277,15 @@
     e.preventDefault(); e.stopPropagation();
     const t = e.touches[0]; if (!t) return;
     if (Math.hypot(t.clientX - state.startX, t.clientY - state.startY) > 10) state.moved = true;
-    const el = pickAt(t.clientX, t.clientY);
-    highlightElement(el);
+    /* RAF 节流：记录最新坐标，合并到每帧一次拾取+高亮，避免布局抖动 */
+    state.lastX = t.clientX; state.lastY = t.clientY;
+    if (!state.rafId) {
+      state.rafId = requestAnimationFrame(() => {
+        state.rafId = 0;
+        const el = pickAt(state.lastX, state.lastY);
+        highlightElement(el);
+      });
+    }
   }
 
   function onTouchEnd(e) {
@@ -314,8 +310,6 @@
     if (state.inspecting) return;
     state.inspecting = true;
     state.fab.classList.add(P + 'active');
-    state.tip = h('div', { class: P + 'tip', text: '检查模式：触摸页面任意元素查看节点信息' });
-    document.documentElement.appendChild(state.tip);
 
     document.addEventListener('touchstart', onTouchStart, { capture: true, passive: false });
     document.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
@@ -330,7 +324,7 @@
     if (!state.inspecting) return;
     state.inspecting = false;
     state.fab.classList.remove(P + 'active');
-    if (state.tip) { state.tip.remove(); state.tip = null; }
+    if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = 0; }
 
     document.removeEventListener('touchstart', onTouchStart, { capture: true });
     document.removeEventListener('touchmove', onTouchMove, { capture: true });
