@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.0.0
+// @version      1.1.0
 // @description  Nodeseek 帖子热度火焰指示器 - Stay for Safari iOS 版
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -21,7 +21,11 @@
 
   // ========== 帖子热度火焰指示器 ==========
   function hotPostFlame() {
+    // 防止重复添加样式
+    if (document.getElementById('nsx-flame-style')) return;
+
     const style = document.createElement('style');
+    style.id = 'nsx-flame-style';
     style.textContent = `
       @keyframes nsx-flame-bounce {
         0% { transform: translateY(0) scale(1) rotate(0deg); }
@@ -46,6 +50,12 @@
         80% { opacity: 1; filter: brightness(1.3); }
         90% { opacity: 0.92; filter: brightness(1); }
       }
+      /* 尊重用户的动画偏好 */
+      @media (prefers-reduced-motion: reduce) {
+        .nsx-hot-flame {
+          animation: none;
+        }
+      }
       .nsx-hot-flame {
         display: inline-block;
         margin-left: 4px;
@@ -55,6 +65,7 @@
         animation: nsx-flame-bounce 5s ease-in-out infinite, nsx-flame-glow 6s ease-in-out infinite, nsx-flame-flicker 3s ease-in-out infinite;
         cursor: default;
         vertical-align: middle;
+        will-change: transform, text-shadow, opacity;
       }
       .nsx-hot-flame-l2 {
         transform: scale(0.65);
@@ -70,9 +81,9 @@
     document.head.appendChild(style);
 
     function addFlames() {
-      const posts = $$('li.post-list-item');
+      // 只选择未处理的帖子，提升性能
+      const posts = $$('li.post-list-item:not([data-flame-added="1"])');
       posts.forEach(post => {
-        if (post.dataset.flameAdded) return;
         const commentSpan = post.querySelector('span.info-comments-count > span');
         const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
         if (count >= 10) {
@@ -82,6 +93,7 @@
             const level = count >= 50 ? 3 : count >= 30 ? 2 : 1;
             flame.className = 'nsx-hot-flame' + (level > 1 ? ` nsx-hot-flame-l${level}` : '');
             flame.textContent = '🔥'.repeat(level);
+            flame.title = `${count} 条评论`;
             titleLink.appendChild(flame);
           }
         }
@@ -89,19 +101,26 @@
       });
     }
 
-    setInterval(addFlames, 3000);
+    // 静态页面只需执行一次
     addFlames();
   }
 
   // ========== 启动 ==========
   function init() {
-    hotPostFlame();
-    console.log('[Nodeseek 热度火焰] 功能已启动');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        requestAnimationFrame(() => {
+          hotPostFlame();
+          console.log('[Nodeseek 热度火焰] 功能已启动');
+        });
+      });
+    } else {
+      requestAnimationFrame(() => {
+        hotPostFlame();
+        console.log('[Nodeseek 热度火焰] 功能已启动');
+      });
+    }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  init();
 })();
