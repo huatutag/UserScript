@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.7
+// @version      1.3.8
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -55,28 +55,29 @@
         0%, 100% {
           opacity: 1;
           transform: scale(1);
-          filter: drop-shadow(0 0 3px rgba(255, 0, 0, 0.5));
+          text-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
         }
         25% {
           opacity: 0.4;
           transform: scale(1.25);
-          filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
+          text-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
         }
         50% {
           opacity: 0.2;
           transform: scale(1.4);
-          filter: drop-shadow(0 0 12px rgba(255, 0, 0, 1));
+          text-shadow: 0 0 12px rgba(255, 0, 0, 1);
         }
         75% {
           opacity: 0.4;
           transform: scale(1.25);
-          filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
+          text-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
         }
       }
 
       .nsx-remind-blink {
         animation: nsx-remind-blink 0.8s ease-in-out infinite;
         transform-origin: center center;
+        will-change: opacity, transform, text-shadow;
       }
 
       /* 礼品图标闪烁动画 - 仅使用 transform/opacity 以走 GPU 合成 */
