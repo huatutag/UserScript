@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.6
+// @version      1.3.7
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -50,20 +50,32 @@
         animation-duration: 1.2s;
       }
 
-      /* 提醒图标闪烁动画 */
+      /* 提醒图标闪烁动画 - 更明显的效果 */
       @keyframes nsx-remind-blink {
         0%, 100% {
           opacity: 1;
           transform: scale(1);
+          filter: drop-shadow(0 0 3px rgba(255, 0, 0, 0.5));
+        }
+        25% {
+          opacity: 0.4;
+          transform: scale(1.25);
+          filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
         }
         50% {
-          opacity: 0.6;
-          transform: scale(1.15);
+          opacity: 0.2;
+          transform: scale(1.4);
+          filter: drop-shadow(0 0 12px rgba(255, 0, 0, 1));
+        }
+        75% {
+          opacity: 0.4;
+          transform: scale(1.25);
+          filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
         }
       }
 
       .nsx-remind-blink {
-        animation: nsx-remind-blink 1.2s ease-in-out infinite;
+        animation: nsx-remind-blink 0.8s ease-in-out infinite;
         transform-origin: center center;
       }
 
@@ -102,7 +114,7 @@
         z-index: 10;
       }
 
-      /* 尊重用户的动画偏好 - 合并所有规则，减少 CSS 解析开销 */
+      /* 合并所有规则，减少 CSS 解析开销 */
       @media (prefers-reduced-motion: reduce) {
         .nsx-hot-flame,
         .nsx-remind-blink,
