@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.8
+// @version      1.3.9
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -240,6 +240,12 @@
           // 使用 IntersectionObserver 暂停不可见元素的动画
           if (flameObserver) {
             flameObserver.observe(icon);
+          }
+
+          // 修改父级 <a> 标签的 href，指向 /notification#/reply
+          const parentLink = icon.closest('a[href="/notification"]');
+          if (parentLink) {
+            parentLink.href = '/notification#/reply';
           }
         }
       } catch (e) {
