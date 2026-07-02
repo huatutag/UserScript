@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.3.9
+// @version      1.3.10
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
