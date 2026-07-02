@@ -55,29 +55,25 @@
         0%, 100% {
           opacity: 1;
           transform: scale(1);
-          text-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
         }
         25% {
           opacity: 0.4;
           transform: scale(1.25);
-          text-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
         }
         50% {
           opacity: 0.2;
           transform: scale(1.4);
-          text-shadow: 0 0 12px rgba(255, 0, 0, 1);
         }
         75% {
           opacity: 0.4;
           transform: scale(1.25);
-          text-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
         }
       }
 
       .nsx-remind-blink {
         animation: nsx-remind-blink 0.8s ease-in-out infinite;
         transform-origin: center center;
-        will-change: opacity, transform, text-shadow;
+        will-change: opacity, transform;
       }
 
       /* 礼品图标闪烁动画 - 仅使用 transform/opacity 以走 GPU 合成 */
@@ -176,10 +172,10 @@
           // 后添加火焰图标（永远在礼品之后）
           const commentSpan = post.querySelector('span.info-comments-count > span');
           const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
-          if (count >= 10) {
+          if (count >= 5) {
             if (!existingFlame) {
               const flame = document.createElement('span');
-              const level = count >= 30 ? 3 : count >= 20 ? 2 : 1;
+              const level = count >= 15 ? 3 : count >= 10 ? 2 : 1;
               flame.className = 'nsx-hot-flame' + (level > 1 ? ` nsx-hot-flame-l${level}` : '');
               flame.textContent = '🔥'.repeat(level);
               flame.title = `${count} 条评论`;
