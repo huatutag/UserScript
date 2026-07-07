@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.4.3
+// @version      1.4.4
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -184,10 +184,10 @@
           // 后添加火焰图标（永远在礼品之后）
           const commentSpan = post.querySelector('span.info-comments-count > span');
           const count = commentSpan ? parseInt(commentSpan.textContent) || 0 : 0;
-          if (count >= 5) {
+          if (count > 7) {
             if (!existingFlame) {
               const flame = document.createElement('span');
-              const level = count >= 15 ? 3 : count >= 10 ? 2 : 1;
+              const level = count > 30 ? 3 : count > 15 ? 2 : 1;
               flame.className = 'nsx-hot-flame' + (level > 1 ? ` nsx-hot-flame-l${level}` : '');
               flame.textContent = '🔥'.repeat(level);
               flame.title = `${count} 条评论`;
@@ -278,3 +278,4 @@
 
   init();
 })();
+
