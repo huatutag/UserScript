@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.4.5
+// @version      1.4.6
 // @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
 // @author       You
 // @match        https://www.nodeseek.com/*
@@ -137,7 +137,7 @@
       const posts = document.querySelectorAll('li.post-list-item:not([data-flame-added="1"])');
       posts.forEach(post => {
         try {
-          post.querySelectorAll('.info-views, .info-last-commenter, .info-last-comment-time').forEach(item => item.remove());
+          post.querySelectorAll('.info-author, .info-views, .info-last-commenter, .info-last-comment-time').forEach(item => item.remove());
 
           const postInfo = post.querySelector('.post-info');
           if (postInfo) {
