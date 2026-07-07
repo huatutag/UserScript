@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         NS 热度火焰
 // @namespace    http://stay.app/
-// @version      1.4.6
-// @description  Nodeseek 帖子热度火焰指示器 + 提醒图标闪烁效果
+// @version      1.4.7
+// @description  为 Nodeseek 帖子添加热度火焰标识，并增强提醒/礼品图标闪烁提示
 // @author       You
 // @match        https://www.nodeseek.com/*
 // @icon         https://www.nodeseek.com/favicon.ico
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  // ========== 将 Observer 提升到外部作用域 ==========
+  // 复用同一个观察器，统一暂停不可见元素动画
   let flameObserver = null;
 
   // ========== 帖子热度火焰指示器 ==========
@@ -50,7 +50,7 @@
         animation-duration: 1.2s;
       }
 
-      /* 提醒图标闪烁动画 - 更明显的效果 */
+      /* 提醒图标闪烁动画 */
       @keyframes nsx-remind-blink {
         0%, 100% {
           opacity: 1;
@@ -111,7 +111,7 @@
         z-index: 10;
       }
 
-      /* 合并所有规则，减少 CSS 解析开销 */
+      /* 尊重系统减少动态效果设置 */
       @media (prefers-reduced-motion: reduce) {
         .nsx-hot-flame,
         .nsx-remind-blink,
@@ -193,8 +193,7 @@
               flame.title = `${count} 条评论`;
 
               // 在礼品图标之后插入火焰图标（确保礼品在前）
-              // 注：existingGift 为本次循环开始时的快照；若本次新建了礼品且无旧火焰，
-              // 则礼品已被 append 到末尾，此处火焰同样 append 会自然落在礼品之后。
+              // existingGift 是循环开始时的快照；新建礼品后 append 火焰即可保持礼品在前。
               if (existingGift && existingGift.nextSibling) {
                 titleLink.insertBefore(flame, existingGift.nextSibling);
               } else {
@@ -208,7 +207,7 @@
             }
           }
         } catch (e) {
-          // 静默处理错误
+          // 单个帖子处理失败不影响其他帖子
         }
         post.dataset.flameAdded = '1';
       });
@@ -257,7 +256,7 @@
           }
         }
       } catch (e) {
-        // 静默处理错误
+        // 单个图标处理失败不影响其他图标
       }
     });
   }
